@@ -1,0 +1,58 @@
+name: Platform checks
+on:
+  workflow_dispatch:
+
+jobs:
+  common-and-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: android-actions/setup-android@v3
+      - name: Install camera dependencies
+        run: python -m pip install -r desktop-camera/requirements-build.txt
+      - name: Build self-contained application image
+        shell: bash
+        run: |
+          export JANKEN_BUILD_PYTHON="$(python -c 'import sys; print(sys.executable)')"
+          bash ./gradlew :desktopApp:createDistributable
+      - name: Common and process tests
+        shell: bash
+        run: |
+          export JANKEN_TEST_PYTHON="$(python -c 'import sys; print(sys.executable)')"
+          bash ./gradlew :domain:desktopTest :presentation:desktopTest :camera:desktopTest :desktopApp:test "-Pjanken.testCameraResources=$(pwd)/desktopApp/build/camera-resources/common"
+      - name: Real model fixtures
+        run: python desktop-camera/test_worker.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Janken-${{ matrix.os }}
+          path: desktopApp/build/compose/binaries/main/app
+
+  ios-build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install native iOS SDK
+        working-directory: iosApp
+        run: pod install
+      - name: Compile simulator application
+        run: >-
+          xcodebuild -workspace iosApp/Janken.xcworkspace -scheme Janken
+          -configuration Debug -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build

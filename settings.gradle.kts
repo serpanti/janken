@@ -5,4 +5,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "Janken"
-include(":app", ":domain", ":presentation", ":camera", ":shared", ":webApp")
+include(":app", ":domain", ":presentation", ":camera", ":shared", ":desktopApp", ":webApp")

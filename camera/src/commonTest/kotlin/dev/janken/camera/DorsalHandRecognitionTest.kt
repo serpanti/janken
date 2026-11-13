@@ -19,6 +19,10 @@ class DorsalHandRecognitionTest {
         for (c in cases) {
             val name = c.getValue("name").jsonPrimitive.content
             assertEquals(expected(c), HandShapeRecognition.classify(image(c), 300, 300), name)
+            val packet = JsonObject(c + mapOf("type" to JsonPrimitive("frame"), "timestampMs" to JsonPrimitive(100)))
+            val frame = (CameraWire.decode(packet.toString()) as CameraMessage.Observation).frame
+            assertEquals(expected(c), frame.move, "adapter: $name")
+            assertTrue(frame.confidence >= .65f, name)
         }
 
     }

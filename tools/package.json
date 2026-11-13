@@ -1,0 +1,6 @@
+{
+  "name": "janken-development-checks",
+  "private": true,
+  "scripts": { "test:web-camera": "node check_web_camera.cjs" },
+  "devDependencies": { "playwright": "1.65.0" }
+}

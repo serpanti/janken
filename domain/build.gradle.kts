@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -11,6 +12,10 @@ kotlin {
         minSdk = 26
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
-    jvm { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+    jvm("desktop") { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs { browser(); nodejs() }
+    iosArm64()
+    iosSimulatorArm64()
     sourceSets { commonTest.dependencies { implementation(kotlin("test")) } }
 }

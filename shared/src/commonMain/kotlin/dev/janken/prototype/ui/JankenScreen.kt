@@ -82,11 +82,10 @@ fun JankenScreen(
     BoxWithConstraints(Modifier.fillMaxSize().background(Ink).safeDrawingPadding()
         .semantics { if (dialogOpen) hideFromAccessibility() }) {
         val landscape = maxWidth > maxHeight && maxWidth >= 720.dp
-        val scrollLayout = !landscape && maxHeight < 680.dp
         val compact = maxHeight < 750.dp
-        val showControls = true
+        val portraitPreviewHeight = (maxHeight * 0.38f).coerceIn(200.dp, 480.dp)
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)
-            .then(if (scrollLayout) Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            .then(if (landscape) Modifier else Modifier.verticalScroll(rememberScrollState()))) {
             Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(Lime), contentAlignment = Alignment.Center) {
                     Text("J", color = Ink, fontWeight = FontWeight.Black, fontSize = 25.sp)
@@ -113,17 +112,15 @@ fun JankenScreen(
             if (landscape) {
                 Row(Modifier.weight(1f).padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                     CameraPanel(state, permissionGranted, cameraActive, cameraAttempt, onPermission, cameraContent, retryCamera, onButtons, Modifier.weight(1f).fillMaxHeight().then(swipeInput))
-                    if (showControls) Column(Modifier.width(340.dp).verticalScroll(rememberScrollState())) {
+                    Column(Modifier.width(340.dp).verticalScroll(rememberScrollState())) {
                         Controls(state, onStart, onRestart, onManualMove, onBotMode, compact = true)
                     }
                 }
             } else {
                 CameraPanel(state, permissionGranted, cameraActive, cameraAttempt, onPermission, cameraContent, retryCamera, onButtons,
-                    (if (scrollLayout) Modifier.height(280.dp).fillMaxWidth() else Modifier.weight(1f).fillMaxWidth()).then(swipeInput))
-                if (showControls) {
-                    Spacer(Modifier.height(if (compact) 12.dp else 18.dp))
-                    Controls(state, onStart, onRestart, onManualMove, onBotMode, compact)
-                }
+                    Modifier.height(portraitPreviewHeight).fillMaxWidth().then(swipeInput))
+                Spacer(Modifier.height(if (compact) 12.dp else 18.dp))
+                Controls(state, onStart, onRestart, onManualMove, onBotMode, compact)
                 Spacer(Modifier.height(12.dp))
             }
         }

@@ -101,9 +101,15 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     assert.equal(evidence.fist.worldPoints.length, 21);
     assert.deepEqual(evidence.errors, []);
     await page.screenshot({ path: path.join(root, '.work/web-live-camera.png') });
-    await page.getByRole('button', { name: 'Начать раунд', exact: true }).click({ force: true });
+    const preview = page.getByLabel('Превью камеры', { exact: true });
+    await preview.waitFor();
+    const previewBeforeRound = await preview.boundingBox();
+    assert.ok(previewBeforeRound && previewBeforeRound.height > 0);
+    await startReadyRound();
     await page.getByRole('button', { name: /Следующий раунд|Сыграть ещё матч/ }).waitFor({ timeout: 12000 });
-    console.log('Full camera round completed.');
+    assert.deepEqual(await preview.boundingBox(), previewBeforeRound,
+      'Showing the result must preserve the portrait camera preview bounds');
+    console.log('Full camera round completed with stable portrait preview bounds.');
 
     await page.getByRole('button', { name: 'Следующий раунд', exact: true }).click({ force: true });
     await page.getByText('Раунд 2', { exact: true }).waitFor({ state: 'attached' });

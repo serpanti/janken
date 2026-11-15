@@ -1,0 +1,14 @@
+[versions]
+room = "3.0.3"
+sqlite = "2.7.1"
+kermit = "2.2.0"
+koin = "4.2.2"
+
+[libraries]
+room-runtime = { module = "androidx.room3:room3-runtime", version.ref = "room" }
+room-compiler = { module = "androidx.room3:room3-compiler", version.ref = "room" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+sqlite-web = { module = "androidx.sqlite:sqlite-web", version.ref = "sqlite" }
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }

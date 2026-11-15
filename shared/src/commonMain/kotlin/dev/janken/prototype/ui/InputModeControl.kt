@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import dev.janken.prototype.mvi.InputMethod
 
 @Composable
-internal fun InputModeControl(method: InputMethod, cameraSupported: Boolean, onSelect: (InputMethod) -> Unit) {
+internal fun InputModeControl(method: InputMethod, cameraSupported: Boolean, onSelect: (InputMethod) -> Unit, showSwipeHint: Boolean = true) {
     val strings = LocalAppStrings.current
     Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -29,8 +29,10 @@ internal fun InputModeControl(method: InputMethod, cameraSupported: Boolean, onS
                 }
             }
         }
-        Text(strings.swipeInputHint, Modifier.fillMaxWidth().padding(top = 5.dp),
-            color = Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+        if (showSwipeHint) {
+            Text(strings.swipeInputHint, Modifier.fillMaxWidth().padding(top = 5.dp),
+                color = Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+        }
     }
 }
 

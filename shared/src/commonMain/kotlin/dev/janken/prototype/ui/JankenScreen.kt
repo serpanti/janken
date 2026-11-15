@@ -79,49 +79,50 @@ fun JankenScreen(
     val onBotMode: (BotMode) -> Unit = { onIntent(GameIntent.SetBotMode(it)) }
     val retryCamera = { onIntent(GameIntent.RetryCamera); onRetry() }
     Box(Modifier.fillMaxSize()) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Ink).safeDrawingPadding()
-        .semantics { if (dialogOpen) hideFromAccessibility() }) {
-        val landscape = maxWidth > maxHeight && maxWidth >= 720.dp
-        val compact = maxHeight < 750.dp
-        val portraitPreviewHeight = (maxHeight * 0.38f).coerceIn(200.dp, 480.dp)
-        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)
-            .then(if (landscape) Modifier else Modifier.verticalScroll(rememberScrollState()))) {
-            Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(Lime), contentAlignment = Alignment.Center) {
-                    Text("J", color = Ink, fontWeight = FontWeight.Black, fontSize = 25.sp)
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("JANKEN", fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp, fontSize = 20.sp)
-                    Row {
-                        Text("じゃんけん", fontFamily = FontFamily(Font(Res.font.japanese_subtitle)), color = Muted, fontSize = 10.sp)
-                        Text(" · ${s.subtitle}", color = Muted, fontSize = 10.sp)
-                    }
-                }
-                TextButton(
-                    onClick = openHistory,
-                    modifier = Modifier.semantics { contentDescription = s.matchHistory },
-                ) {
-                    Text(s.history, color = if (state.history.storageError) Warm else Snow)
-                }
-                Box(Modifier.clip(CircleShape).background(Panel).clickable(onClick = openSettings).padding(horizontal = 14.dp, vertical = 8.dp).semantics { contentDescription = s.settings }) {
-                    Text("•••", color = Snow, letterSpacing = 2.sp)
-                }
-            }
-            InputModeControl(state.settings.inputMethod, cameraSupported, onInput)
-            if (landscape) {
-                Row(Modifier.weight(1f).padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    CameraPanel(state, permissionGranted, cameraActive, cameraAttempt, onPermission, cameraContent, retryCamera, onButtons, Modifier.weight(1f).fillMaxHeight().then(swipeInput))
-                    Column(Modifier.width(340.dp).verticalScroll(rememberScrollState())) {
-                        Controls(state, onStart, onRestart, onManualMove, onBotMode, compact = true)
+    BoxWithConstraints(
+        Modifier.fillMaxSize().background(Ink).safeDrawingPadding()
+            .semantics { if (dialogOpen) hideFromAccessibility() },
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        val twoColumns = maxWidth >= 560.dp && maxWidth > maxHeight
+        val compact = maxWidth < 400.dp || maxHeight < 760.dp
+        val shortLandscape = twoColumns && maxHeight < 480.dp
+        val shortPortrait = !twoColumns && maxHeight < 680.dp
+        val showSubtitle = maxWidth >= 390.dp
+        val horizontalPadding = if (maxWidth < 360.dp || shortLandscape) 12.dp else 20.dp
+        val layoutWidth = if (twoColumns) 1200.dp else 560.dp
+        val previewWidth = maxWidth.coerceAtMost(layoutWidth) - horizontalPadding * 2
+        val previewRatio = when {
+            shortPortrait -> 0.29f
+            compact -> 0.34f
+            else -> 0.38f
+        }
+        val previewHeight = minOf(maxHeight * previewRatio, previewWidth * 0.86f).coerceIn(140.dp, 440.dp)
+        val controlsWidth = (maxWidth * 0.42f).coerceIn(230.dp, 340.dp)
+
+        Column(Modifier.widthIn(max = layoutWidth).fillMaxSize().padding(horizontal = horizontalPadding)) {
+            GameHeader(state.history.storageError, openHistory, openSettings, compact, showSubtitle)
+            if (twoColumns) {
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(horizontalPadding)) {
+                    CameraPanel(state, permissionGranted, cameraActive, cameraAttempt, onPermission, cameraContent,
+                        retryCamera, onButtons, Modifier.weight(1f).fillMaxHeight().padding(bottom = 12.dp).then(swipeInput))
+                    Column(Modifier.width(controlsWidth).fillMaxHeight()) {
+                        InputModeControl(state.settings.inputMethod, cameraSupported, onInput, showSwipeHint = !shortLandscape)
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                            Controls(state, onRestart, onManualMove, onBotMode, compact = true, compactLandscape = shortLandscape)
+                        }
+                        RoundAction(state, onStart, onRestart)
                     }
                 }
             } else {
-                CameraPanel(state, permissionGranted, cameraActive, cameraAttempt, onPermission, cameraContent, retryCamera, onButtons,
-                    Modifier.height(portraitPreviewHeight).fillMaxWidth().then(swipeInput))
-                Spacer(Modifier.height(if (compact) 12.dp else 18.dp))
-                Controls(state, onStart, onRestart, onManualMove, onBotMode, compact)
-                Spacer(Modifier.height(12.dp))
+                InputModeControl(state.settings.inputMethod, cameraSupported, onInput, showSwipeHint = !shortPortrait)
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                    CameraPanel(state, permissionGranted, cameraActive, cameraAttempt, onPermission, cameraContent,
+                        retryCamera, onButtons, Modifier.height(previewHeight).fillMaxWidth().then(swipeInput))
+                    Spacer(Modifier.height(if (compact) 12.dp else 18.dp))
+                    Controls(state, onRestart, onManualMove, onBotMode, compact)
+                }
+                RoundAction(state, onStart, onRestart)
             }
         }
     }
@@ -139,6 +140,42 @@ fun JankenScreen(
             Text(s.botRules, color = Muted)
         }
     }
+    }
+}
+
+@Composable
+private fun GameHeader(
+    historyError: Boolean,
+    onHistory: () -> Unit,
+    onSettings: () -> Unit,
+    compact: Boolean,
+    showSubtitle: Boolean,
+) {
+    val s = LocalAppStrings.current
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = if (compact) 6.dp else 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(Lime), contentAlignment = Alignment.Center) {
+            Text("J", color = Ink, fontWeight = FontWeight.Black, fontSize = 25.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text("JANKEN", fontWeight = FontWeight.ExtraBold, letterSpacing = 3.sp, fontSize = 20.sp, maxLines = 1)
+            Row {
+                Text("じゃんけん", fontFamily = FontFamily(Font(Res.font.japanese_subtitle)), color = Muted, fontSize = 10.sp, maxLines = 1)
+                if (showSubtitle) {
+                    Text(" · ${s.subtitle}", color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        TextButton(onClick = onHistory, modifier = Modifier.semantics { contentDescription = s.matchHistory }) {
+            Text(s.history, color = if (historyError) Warm else Snow, maxLines = 1)
+        }
+        Box(Modifier.clip(CircleShape).background(Panel).clickable(onClick = onSettings)
+            .padding(horizontal = 14.dp, vertical = 8.dp).semantics { contentDescription = s.settings }) {
+            Text("•••", color = Snow, letterSpacing = 2.sp)
+        }
     }
 }
 
@@ -168,6 +205,7 @@ private fun CameraPanelContent(
     BoxWithConstraints(modifier.clip(RoundedCornerShape(28.dp)).background(Panel).border(1.dp, Edge, RoundedCornerShape(28.dp))) {
         val smallPreview = maxHeight < 260.dp
         val tightPreview = maxHeight < 360.dp
+        val shortPreview = maxHeight < 200.dp
         if (!state.usesButtons && permissionGranted && active) {
             key(attempt) { cameraContent(Modifier.fillMaxSize()) }
         }
@@ -190,20 +228,20 @@ private fun CameraPanelContent(
         }
         when {
             !state.usesButtons && !permissionGranted -> {
-                Column(Modifier.align(Alignment.Center).padding(if (tightPreview) 16.dp else 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (tightPreview) 6.dp else 12.dp)) {
+                Column(Modifier.align(Alignment.Center).verticalScroll(rememberScrollState()).padding(if (tightPreview) 16.dp else 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (tightPreview) 6.dp else 12.dp)) {
                     if (!tightPreview) Text("✋", fontSize = 48.sp, fontFamily = gestureFont())
                     Text(s.playWithHand, fontSize = if (tightPreview) 18.sp else 21.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    Text(s.grantHint, color = Muted, textAlign = TextAlign.Center, fontSize = 13.sp)
+                    if (!shortPreview) Text(s.grantHint, color = Muted, textAlign = TextAlign.Center, fontSize = 13.sp)
                     Button(onClick = onPermission, colors = ButtonDefaults.buttonColors(containerColor = Lime, contentColor = Ink)) { Text(s.allowCamera) }
-                    TextButton(onClick = { onButtons(true) }) { Text(s.useButtons, color = Cyan) }
+                    if (!shortPreview) TextButton(onClick = { onButtons(true) }) { Text(s.useButtons, color = Cyan) }
                 }
             }
             !state.usesButtons && state.cameraError != null -> {
-                Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.align(Alignment.Center).verticalScroll(rememberScrollState()).padding(if (shortPreview) 12.dp else 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(s.cameraUnavailable, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     Text(s.cameraError(state.cameraError.orEmpty()), color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
                     Button(onClick = onRetry) { Text(s.retry) }
-                    TextButton(onClick = { onButtons(true) }) { Text(s.useButtons) }
+                    if (!shortPreview) TextButton(onClick = { onButtons(true) }) { Text(s.useButtons) }
                 }
             }
             state.paused -> {
@@ -261,43 +299,31 @@ private fun CameraPanelContent(
 @Composable
 private fun Controls(
     state: GameUiState,
-    onStart: () -> Unit,
     onRestart: () -> Unit,
     onManualMove: (Move) -> Unit,
     onBotMode: (BotMode) -> Unit,
     compact: Boolean,
+    compactLandscape: Boolean = false,
 ) {
     val s = LocalAppStrings.current
     val match = state.match
     val running = match.phase == Phase.COUNTDOWN || match.phase == Phase.CAPTURING
+    val showResult = match.phase == Phase.RESULT || match.phase == Phase.FINISHED
+    val movesAfterResult = compactLandscape && showResult
     Column(verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp)) {
-        run {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Move.entries.forEach { move ->
-                    val selected = state.manualMove == move
-                    Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(if (selected) Lime.copy(alpha = .14f) else Panel)
-                            .border(1.dp, if (selected) Lime else Edge, RoundedCornerShape(14.dp))
-                            .clickable(enabled = state.usesButtons && !state.paused) { onManualMove(move) }.padding(vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(move.symbol, fontSize = 23.sp, fontFamily = gestureFont())
-                        Text(move.title, color = if (selected) Lime else Muted, fontSize = 10.sp)
-                    }
-                }
-            }
-        }
+        if (!movesAfterResult) MoveButtons(state, onManualMove)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Score(s.you, match.playerScore, Lime, Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(s.firstToThree, color = Muted, fontSize = 9.sp, letterSpacing = 1.5.sp)
+                if (!compactLandscape) Text(s.firstToThree, color = Muted, fontSize = 9.sp, letterSpacing = 1.5.sp)
                 Text("${match.playerScore} : ${match.botScore}", fontSize = 30.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
-                Text(s.round(match.rounds.size + if (match.phase in listOf(Phase.RESULT, Phase.FINISHED)) 0 else 1), color = Muted, fontSize = 10.sp)
+                Text(s.round(match.rounds.size + if (showResult) 0 else 1), color = Muted, fontSize = 10.sp)
             }
             Score(s.bot, match.botScore, Cyan, Modifier.weight(1f))
         }
-        if (match.phase in listOf(Phase.RESULT, Phase.FINISHED)) {
+        if (showResult) {
             ResultCard(match)
+            if (movesAfterResult) MoveButtons(state, onManualMove)
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(s.opponent, color = Muted, fontSize = 12.sp, modifier = Modifier.weight(1f))
@@ -311,22 +337,6 @@ private fun Controls(
             if (state.message != null) {
                 Text(s.message(state.message!!), color = Warm, fontSize = 12.sp, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
-        }
-        Button(
-            onClick = if (match.phase == Phase.FINISHED) onRestart else onStart,
-            enabled = !state.history.loading && !state.paused && !running &&
-                (match.matchOver || state.usesButtons || state.cameraReady && state.cameraError == null),
-            modifier = Modifier.fillMaxWidth().height(54.dp),
-            shape = RoundedCornerShape(17.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Lime, contentColor = Ink, disabledContainerColor = Edge, disabledContentColor = Muted),
-        ) {
-            Text(when (match.phase) {
-                Phase.READY -> if (match.rounds.isEmpty()) s.start else s.continueRound
-                Phase.COUNTDOWN -> s.getReadyButton
-                Phase.CAPTURING -> s.showGestureButton
-                Phase.RESULT -> s.nextRound
-                Phase.FINISHED -> s.playAgain
-            }, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Text(gestureText(s.beatsCaption), color = Muted, fontSize = 11.sp)
@@ -344,6 +354,48 @@ private fun Controls(
                 Text(s.reset, color = Muted, fontSize = 10.sp, modifier = Modifier.clickable(enabled = !running, onClick = onRestart).padding(4.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun MoveButtons(state: GameUiState, onManualMove: (Move) -> Unit) {
+    val icons = gestureFont()
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Move.entries.forEach { move ->
+            val selected = state.manualMove == move
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(if (selected) Lime.copy(alpha = .14f) else Panel)
+                    .border(1.dp, if (selected) Lime else Edge, RoundedCornerShape(14.dp))
+                    .clickable(enabled = state.usesButtons && !state.paused) { onManualMove(move) }.padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(move.symbol, fontSize = 23.sp, fontFamily = icons)
+                Text(move.title, color = if (selected) Lime else Muted, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoundAction(state: GameUiState, onStart: () -> Unit, onRestart: () -> Unit) {
+    val s = LocalAppStrings.current
+    val match = state.match
+    val running = match.phase == Phase.COUNTDOWN || match.phase == Phase.CAPTURING
+    Button(
+        onClick = if (match.phase == Phase.FINISHED) onRestart else onStart,
+        enabled = !state.history.loading && !state.paused && !running &&
+            (match.matchOver || state.usesButtons || state.cameraReady && state.cameraError == null),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp).heightIn(min = 54.dp),
+        shape = RoundedCornerShape(17.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Lime, contentColor = Ink, disabledContainerColor = Edge, disabledContentColor = Muted),
+    ) {
+        Text(when (match.phase) {
+            Phase.READY -> if (match.rounds.isEmpty()) s.start else s.continueRound
+            Phase.COUNTDOWN -> s.getReadyButton
+            Phase.CAPTURING -> s.showGestureButton
+            Phase.RESULT -> s.nextRound
+            Phase.FINISHED -> s.playAgain
+        }, fontWeight = FontWeight.Bold, fontSize = 15.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -427,7 +479,7 @@ private fun DemoBackdrop(move: Move?, showHand: Boolean, modifier: Modifier) {
     val gridColor = Cyan
     BoxWithConstraints(modifier.background(Brush.linearGradient(listOf(Color(0xFF172C31), Color(0xFF0C141B))))) {
         val small = maxHeight < 260.dp
-        val tiny = maxHeight < 150.dp
+        val tiny = maxHeight < 190.dp
         Canvas(Modifier.fillMaxSize()) {
             val step = 28.dp.toPx()
             var x = 0f
@@ -436,7 +488,7 @@ private fun DemoBackdrop(move: Move?, showHand: Boolean, modifier: Modifier) {
             while (y < size.height) { drawLine(gridColor.copy(alpha = .045f), Offset(0f, y), Offset(size.width, y)); y += step }
             drawRoundRect(gridColor.copy(alpha = .12f), Offset(size.width * .18f, size.height * .18f), Size(size.width * .64f, size.height * .55f), CornerRadius(32.dp.toPx()), style = Stroke(1.dp.toPx()))
         }
-        if (showHand) Text(move?.symbol ?: "✋", fontSize = if (tiny) 36.sp else if (small) 56.sp else 100.sp, fontFamily = gestureFont(), modifier = Modifier.align(Alignment.Center).offset(y = if (tiny) 14.dp else if (small) (-24).dp else (-14).dp))
+        if (showHand) Text(move?.symbol ?: "✋", fontSize = if (tiny) 36.sp else if (small) 56.sp else 100.sp, fontFamily = gestureFont(), modifier = Modifier.align(Alignment.Center).offset(y = if (small) (-24).dp else (-14).dp))
     }
 }
 

@@ -248,6 +248,28 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     await denied.close();
     console.log('Denied camera can fall back to buttons without losing the pending round.');
     console.log('Visible input tabs, left/right preview swipes and the short-swipe threshold exercised.');
+
+    for (const viewport of [{ width: 320, height: 568 }, { width: 640, height: 360 }, { width: 768, height: 1024 }]) {
+      const layout = await browser.newPage({ viewport });
+      await layout.addInitScript(() => localStorage.setItem('dev.janken.settings.v1', 'inputMethod=BUTTONS'));
+      await layout.goto(url, { waitUntil: 'networkidle' });
+      await accessibility(layout);
+      const start = layout.getByRole('button', { name: 'Начать раунд', exact: true });
+      await start.waitFor({ state: 'attached' });
+      const bounds = await start.boundingBox();
+      assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= viewport.height,
+        `Primary action is outside the viewport at ${viewport.width}×${viewport.height}`);
+      if (viewport.width > viewport.height) {
+        const previewStatus = await layout.getByText('ВВОД КНОПКАМИ', { exact: true }).boundingBox();
+        assert.ok(previewStatus && bounds.x >= previewStatus.x + previewStatus.width,
+          'Landscape controls must be beside the preview');
+      } else {
+        assert.ok(bounds.width <= 560, 'Portrait controls must fit the centered column');
+      }
+      await layout.close();
+    }
+    console.log('Primary action fits narrow, short landscape and tablet viewports.');
+
     assert.ok(!errors.some(error => !/^INFO: Created TensorFlow Lite XNNPACK delegate for CPU\.$/.test(error)), JSON.stringify(errors));
     await fs.writeFile(path.join(root, '.work/web-camera-evidence.json'), JSON.stringify({ ...evidence, consoleErrors: errors }, null, 2));
   } catch (error) {

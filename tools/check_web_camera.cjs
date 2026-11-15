@@ -249,7 +249,8 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     console.log('Denied camera can fall back to buttons without losing the pending round.');
     console.log('Visible input tabs, left/right preview swipes and the short-swipe threshold exercised.');
 
-    for (const viewport of [{ width: 320, height: 568 }, { width: 640, height: 360 }, { width: 768, height: 1024 }]) {
+    for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 800 },
+        { width: 640, height: 360 }, { width: 768, height: 1024 }]) {
       const layout = await browser.newPage({ viewport });
       await layout.addInitScript(() => localStorage.setItem('dev.janken.settings.v1', 'inputMethod=BUTTONS'));
       await layout.goto(url, { waitUntil: 'networkidle' });
@@ -265,6 +266,28 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
           'Landscape controls must be beside the preview');
       } else {
         assert.ok(bounds.width <= 560, 'Portrait controls must fit the centered column');
+      }
+      if (viewport.width <= 360) {
+        const moves = ['Камень', 'Бумага', 'Ножницы'].map(name => layout.getByRole('button', { name: new RegExp(name + '$') }));
+        const moveBounds = await Promise.all(moves.map(move => move.boundingBox()));
+        assert.ok(moveBounds.every(box => box && box.y === moveBounds[0].y && box.height === moveBounds[0].height),
+          'All three move buttons must align in the same row');
+        assert.ok(moveBounds.every((box, index) => box.x >= 0 && box.x + box.width <= viewport.width &&
+          (index === 0 || box.x >= moveBounds[index - 1].x + moveBounds[index - 1].width)),
+          'Move buttons must fit without overlapping');
+        const historyButton = layout.getByLabel('История матчей', { exact: true });
+        const historyBounds = await historyButton.boundingBox();
+        assert.ok(historyBounds && historyBounds.x >= 0 && historyBounds.x + historyBounds.width <= viewport.width);
+        await moves[1].click({ force: true });
+        await startReadyRound(layout);
+        const next = layout.getByRole('button', { name: 'Следующий раунд', exact: true });
+        await next.waitFor({ timeout: 12000 });
+        assert.deepEqual(await Promise.all(moves.map(move => move.boundingBox())), moveBounds);
+        assert.deepEqual(await historyButton.boundingBox(), historyBounds);
+        const roundDetails = await layout.getByText(/^Вы:.+бот:/).boundingBox();
+        const nextBounds = await next.boundingBox();
+        assert.ok(roundDetails && nextBounds && roundDetails.y + roundDetails.height <= nextBounds.y - 8,
+          'Round result must fit above the primary action on narrow screens');
       }
       await layout.close();
     }

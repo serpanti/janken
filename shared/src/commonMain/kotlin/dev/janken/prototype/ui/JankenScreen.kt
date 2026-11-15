@@ -93,11 +93,13 @@ fun JankenScreen(
         val layoutWidth = if (twoColumns) 1200.dp else 560.dp
         val previewWidth = maxWidth.coerceAtMost(layoutWidth) - horizontalPadding * 2
         val previewRatio = when {
+            shortPortrait && maxHeight < 550.dp -> 0.26f
             shortPortrait -> 0.29f
             compact -> 0.34f
             else -> 0.38f
         }
-        val previewHeight = minOf(maxHeight * previewRatio, previewWidth * 0.86f).coerceIn(140.dp, 440.dp)
+        val minPreviewHeight = if (shortPortrait) 120.dp else 140.dp
+        val previewHeight = minOf(maxHeight * previewRatio, previewWidth * 0.86f).coerceIn(minPreviewHeight, 440.dp)
         val controlsWidth = (maxWidth * 0.42f).coerceIn(230.dp, 340.dp)
 
         Column(Modifier.widthIn(max = layoutWidth).fillMaxSize().padding(horizontal = horizontalPadding)) {
@@ -119,8 +121,8 @@ fun JankenScreen(
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                     CameraPanel(state, permissionGranted, cameraActive, cameraAttempt, onPermission, cameraContent,
                         retryCamera, onButtons, Modifier.height(previewHeight).fillMaxWidth().then(swipeInput))
-                    Spacer(Modifier.height(if (compact) 12.dp else 18.dp))
-                    Controls(state, onRestart, onManualMove, onBotMode, compact)
+                    Spacer(Modifier.height(if (shortPortrait) 8.dp else if (compact) 12.dp else 18.dp))
+                    Controls(state, onRestart, onManualMove, onBotMode, compact, shortPortrait = shortPortrait)
                 }
                 RoundAction(state, onStart, onRestart)
             }
@@ -304,26 +306,34 @@ private fun Controls(
     onBotMode: (BotMode) -> Unit,
     compact: Boolean,
     compactLandscape: Boolean = false,
+    shortPortrait: Boolean = false,
 ) {
     val s = LocalAppStrings.current
     val match = state.match
     val running = match.phase == Phase.COUNTDOWN || match.phase == Phase.CAPTURING
     val showResult = match.phase == Phase.RESULT || match.phase == Phase.FINISHED
     val movesAfterResult = compactLandscape && showResult
-    Column(verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp)) {
-        if (!movesAfterResult) MoveButtons(state, onManualMove)
+    val denseControls = shortPortrait || compactLandscape
+    val spacing = when {
+        shortPortrait -> 6.dp
+        compact -> 10.dp
+        else -> 14.dp
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+        if (!movesAfterResult) MoveButtons(state, onManualMove, denseControls)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Score(s.you, match.playerScore, Lime, Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (!compactLandscape) Text(s.firstToThree, color = Muted, fontSize = 9.sp, letterSpacing = 1.5.sp)
+                if (!denseControls) Text(s.firstToThree, color = Muted, fontSize = 9.sp, letterSpacing = 1.5.sp)
                 Text("${match.playerScore} : ${match.botScore}", fontSize = 30.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
-                Text(s.round(match.rounds.size + if (showResult) 0 else 1), color = Muted, fontSize = 10.sp)
+                Text(s.round(match.rounds.size + if (showResult) 0 else 1), color = Muted, fontSize = 10.sp,
+                    lineHeight = if (denseControls) 14.sp else 24.sp)
             }
             Score(s.bot, match.botScore, Cyan, Modifier.weight(1f))
         }
         if (showResult) {
-            ResultCard(match)
-            if (movesAfterResult) MoveButtons(state, onManualMove)
+            ResultCard(match, denseControls)
+            if (movesAfterResult) MoveButtons(state, onManualMove, denseControls)
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(s.opponent, color = Muted, fontSize = 12.sp, modifier = Modifier.weight(1f))
@@ -358,19 +368,23 @@ private fun Controls(
 }
 
 @Composable
-private fun MoveButtons(state: GameUiState, onManualMove: (Move) -> Unit) {
+private fun MoveButtons(state: GameUiState, onManualMove: (Move) -> Unit, dense: Boolean) {
     val icons = gestureFont()
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Move.entries.forEach { move ->
             val selected = state.manualMove == move
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(if (selected) Lime.copy(alpha = .14f) else Panel)
+                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(14.dp))
+                    .background(if (selected) Lime.copy(alpha = .14f) else Panel)
                     .border(1.dp, if (selected) Lime else Edge, RoundedCornerShape(14.dp))
-                    .clickable(enabled = state.usesButtons && !state.paused) { onManualMove(move) }.padding(vertical = 10.dp),
+                    .clickable(enabled = state.usesButtons && !state.paused) { onManualMove(move) }
+                    .padding(vertical = if (dense) 8.dp else 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
                 Text(move.symbol, fontSize = 23.sp, fontFamily = icons)
-                Text(move.title, color = if (selected) Lime else Muted, fontSize = 10.sp)
+                Text(move.title, color = if (selected) Lime else Muted, fontSize = 10.sp,
+                    lineHeight = if (dense) 14.sp else 24.sp, textAlign = TextAlign.Center)
             }
         }
     }
@@ -410,17 +424,20 @@ private fun Score(label: String, score: Int, color: Color, modifier: Modifier) {
 }
 
 @Composable
-private fun ResultCard(match: MatchState) {
+private fun ResultCard(match: MatchState, dense: Boolean) {
     val s = LocalAppStrings.current
     val round = match.lastRound ?: return
     val color = when (round.outcome) { Outcome.WIN -> Lime; Outcome.LOSS -> Rose; Outcome.DRAW -> Cyan }
     val title = if (match.phase == Phase.FINISHED) {
         if (match.playerScore >= 3) s.matchWin else s.matchLoss
     } else when (round.outcome) { Outcome.WIN -> s.roundWin; Outcome.LOSS -> s.roundLoss; Outcome.DRAW -> s.draw }
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(color.copy(alpha = .09f)).border(1.dp, color.copy(alpha = .25f), RoundedCornerShape(16.dp)).padding(12.dp).semantics { liveRegion = LiveRegionMode.Polite }, verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(color.copy(alpha = .09f))
+        .border(1.dp, color.copy(alpha = .25f), RoundedCornerShape(16.dp))
+        .padding(horizontal = 12.dp, vertical = if (dense) 8.dp else 12.dp)
+        .semantics { liveRegion = LiveRegionMode.Polite }, verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = color, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(s.roundMoves(round), color = Muted, fontSize = 10.sp)
+            Text(title, color = color, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = if (dense) 20.sp else 24.sp)
+            Text(s.roundMoves(round), color = Muted, fontSize = 10.sp, lineHeight = if (dense) 14.sp else 24.sp)
         }
         val icons = gestureFont()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

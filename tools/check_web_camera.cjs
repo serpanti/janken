@@ -109,6 +109,7 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     await page.getByRole('button', { name: /Следующий раунд|Сыграть ещё матч/ }).waitFor({ timeout: 12000 });
     assert.deepEqual(await preview.boundingBox(), previewBeforeRound,
       'Showing the result must preserve the portrait camera preview bounds');
+    await page.getByText('VS', { exact: true }).waitFor({ state: 'attached' });
     console.log('Full camera round completed with stable portrait preview bounds.');
 
     await page.getByRole('button', { name: 'Следующий раунд', exact: true }).click({ force: true });
@@ -194,13 +195,36 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     }
     await playAgain.click({ force: true });
     await page.getByRole('button', { name: 'Начать раунд', exact: true }).waitFor({ state: 'attached' });
+    await page.getByRole('button', { name: /Бумага$/ }).click({ force: true });
+    await startReadyRound();
+    await nextRound.waitFor({ timeout: 12000 });
     await page.reload({ waitUntil: 'networkidle' });
     await accessibility(page);
-    await page.getByRole('button', { name: 'Начать раунд', exact: true }).waitFor({ state: 'attached' });
-    await page.getByLabel('История матчей', { exact: true }).click({ force: true });
-    await page.getByText(/^(Победа|Поражение)$/).waitFor({ state: 'attached' });
-    await page.getByText(/^(3 : [0-2]|[0-2] : 3)$/).waitFor({ state: 'attached' });
+    const secondRound = page.getByText('Раунд 2', { exact: true });
+    await secondRound.waitFor({ state: 'attached' });
+    const openHistory = page.getByLabel('История матчей', { exact: true });
+    const clearHistory = page.getByRole('button', { name: 'Очистить историю', exact: true });
+    const archivedScore = page.getByText(/^(3 : [0-2]|[0-2] : 3)$/);
+    const emptyHistory = page.getByText('Завершённые матчи появятся здесь.', { exact: true });
+    await openHistory.click({ force: true });
+    await archivedScore.waitFor({ state: 'attached' });
     console.log('The archived score survives starting a new match and reloading.');
+
+    await clearHistory.click({ force: true });
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click({ force: true });
+    await archivedScore.waitFor({ state: 'attached' });
+    await clearHistory.click({ force: true });
+    await page.getByRole('button', { name: 'Очистить', exact: true }).click({ force: true });
+    await emptyHistory.waitFor({ state: 'attached' });
+    await page.reload({ waitUntil: 'networkidle' });
+    await accessibility(page);
+    await secondRound.waitFor({ state: 'attached' });
+    await openHistory.click({ force: true });
+    await emptyHistory.waitFor({ state: 'attached' });
+    await clearHistory.click({ force: true });
+    await page.waitForTimeout(200);
+    assert.equal(await page.getByText('Очистить историю?', { exact: true }).count(), 0);
+    console.log('Clearing history survives reload and preserves the current match.');
 
     const denied = await browser.newPage({ viewport: { width: 480, height: 850 } });
     await denied.addInitScript(() => {
@@ -212,11 +236,13 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     await denied.getByRole('button', { name: 'Разрешить камеру', exact: true }).click({ force: true });
     await denied.getByText(/Доступ к камере запрещён/).waitFor({ state: 'attached' });
     await input('Кнопки', denied);
-    await denied.getByRole('button', { name: 'Начать раунд', exact: true }).click({ force: true });
+    await startReadyRound(denied);
+    await denied.getByText('БОТ УЖЕ ВЫБРАЛ ХОД', { exact: true }).waitFor({ state: 'attached' });
     await input('Камера', denied);
     await denied.getByText(/Доступ к камере запрещён/).waitFor({ state: 'attached' });
     await denied.getByText('Раунд 1', { exact: true }).waitFor({ state: 'attached' });
     await input('Кнопки', denied);
+    await denied.getByText('ВВОД КНОПКАМИ', { exact: true }).waitFor({ state: 'attached' });
     await denied.getByRole('button', { name: /Бумага$/ }).click({ force: true });
     await denied.getByRole('button', { name: /Следующий раунд|Сыграть ещё матч/ }).waitFor({ timeout: 12000 });
     await denied.close();

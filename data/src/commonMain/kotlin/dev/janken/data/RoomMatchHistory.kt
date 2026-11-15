@@ -17,14 +17,22 @@ internal class RoomMatchHistory(private val dao: MatchDao) : MatchHistoryReposit
     }
 
     override suspend fun save(match: SavedMatch) {
-        val score = MatchState(rounds = match.rounds)
-        dao.save(MatchEntity(
-            id = match.id,
-            rounds = match.rounds.joinToString(",") { "${it.player.name}:${it.bot.name}" },
+        dao.save(match.toEntity())
+    }
+
+    override suspend fun clearCompleted(current: SavedMatch) {
+        dao.clearCompleted(current.toEntity())
+    }
+
+    private fun SavedMatch.toEntity(): MatchEntity {
+        val score = MatchState(rounds = rounds)
+        return MatchEntity(
+            id = id,
+            rounds = rounds.joinToString(",") { "${it.player.name}:${it.bot.name}" },
             playerScore = score.playerScore,
             botScore = score.botScore,
             finished = score.matchOver,
-        ))
+        )
     }
 
     private fun decodeRounds(value: String): List<Round> =

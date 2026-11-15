@@ -127,7 +127,7 @@ fun JankenScreen(
     }
     if (settingsOpen) SettingsDialog(state.settings, cameraSupported, onIntent,
         onRules = { settingsOpen = false; help = true }, onDismiss = closeDialogs)
-    if (historyOpen) MatchHistoryDialog(state.history, closeDialogs)
+    if (historyOpen) MatchHistoryDialog(state.history, { onIntent(GameIntent.ClearMatchHistory) }, closeDialogs)
     if (help) AppModal(s.rules, closeDialogs, actions = {
         TextButton(onClick = { help = false; settingsOpen = true }) { Text(s.settings) }
         TextButton(onClick = closeDialogs) { Text(s.done) }
@@ -370,7 +370,12 @@ private fun ResultCard(match: MatchState) {
             Text(title, color = color, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Text(s.roundMoves(round), color = Muted, fontSize = 10.sp)
         }
-        Text("${round.player.symbol}  ${round.bot.symbol}", fontSize = 25.sp, fontFamily = gestureFont())
+        val icons = gestureFont()
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(round.player.symbol, fontSize = 25.sp, fontFamily = icons)
+            Text("VS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(round.bot.symbol, fontSize = 25.sp, fontFamily = icons)
+        }
     }
 }
 

@@ -65,6 +65,14 @@ class AppStrings(val language: AppLanguage) {
     val beatsCaption get() = t("✊  бьёт  ✌     ·     ✌  бьёт  ✋     ·     ✋  бьёт  ✊", "✊  beats  ✌     ·     ✌  beats  ✋     ·     ✋  beats  ✊")
     val history get() = t("История", "History")
     val matchHistory get() = t("История матчей", "Match history")
+    val clearHistory get() = t("Очистить историю", "Clear history")
+    val clearHistoryTitle get() = t("Очистить историю?", "Clear history?")
+    val clearHistoryMessage get() = t(
+        "Результаты завершённых матчей будут удалены. Счёт незавершённого матча сохранится.",
+        "Completed matches will be removed. Your current match can still be resumed.",
+    )
+    val clear get() = t("Очистить", "Clear")
+    val cancel get() = t("Отмена", "Cancel")
     val recentRounds get() = t("Раунды", "Rounds")
     val noMatches get() = t("Завершённые матчи появятся здесь.", "Completed matches will appear here.")
     val loadingHistory get() = t("Загружаем историю…", "Loading history…")

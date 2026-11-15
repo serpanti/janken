@@ -23,6 +23,7 @@ data class GameUiState(
 data class MatchHistoryUiState(
     val completed: List<MatchSummary> = emptyList(),
     val loading: Boolean = false,
+    val clearing: Boolean = false,
     val storageError: Boolean = false,
 )
 
@@ -38,6 +39,7 @@ data class GameSnapshot(
 sealed interface GameIntent {
     data object StartRound : GameIntent
     data object Restart : GameIntent
+    data object ClearMatchHistory : GameIntent
     data object Pause : GameIntent
     data object Resume : GameIntent
     data object Tick : GameIntent

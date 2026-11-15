@@ -8,6 +8,7 @@ import androidx.room3.PrimaryKey
 import androidx.room3.Query
 import androidx.room3.RoomDatabase
 import androidx.room3.RoomDatabaseConstructor
+import androidx.room3.Transaction
 import androidx.room3.Upsert
 
 internal const val MATCH_DATABASE_NAME = "janken-matches.db"
@@ -28,6 +29,15 @@ internal interface MatchDao {
 
     @Upsert
     suspend fun save(match: MatchEntity)
+
+    @Query("DELETE FROM matches WHERE id != :currentId")
+    suspend fun deleteOtherMatches(currentId: String)
+
+    @Transaction
+    suspend fun clearCompleted(current: MatchEntity) {
+        save(current)
+        deleteOtherMatches(current.id)
+    }
 }
 
 @Database(entities = [MatchEntity::class], version = 1)

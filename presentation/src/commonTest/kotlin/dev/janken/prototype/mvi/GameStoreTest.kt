@@ -61,6 +61,7 @@ class GameStoreTest {
                 writing.await()
                 written += match
             }
+            override suspend fun clearCompleted(current: SavedMatch) = error("Unexpected history clear")
         }
         val store = GameStore(
             backgroundScope, GameClock { now },

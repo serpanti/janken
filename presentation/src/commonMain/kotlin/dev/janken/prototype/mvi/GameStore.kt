@@ -67,6 +67,9 @@ class GameStore(
                     if (intent == GameIntent.Restart) matchId = null
                     next = next.copy(ui = next.ui.copy(history = persistMatch(next.ui.match, next.ui.history)))
                 }
+                if (intent == GameIntent.ClearMatchHistory) {
+                    next = next.copy(ui = next.ui.copy(history = clearMatchHistory(next.ui)))
+                }
                 model = next
                 mutableState.value = model.ui
                 result.effects.forEach { mutableEffects.tryEmit(it) }
@@ -79,6 +82,29 @@ class GameStore(
                     intents.send(GameIntent.Tick)
                 }
             }
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private suspend fun clearMatchHistory(ui: GameUiState): MatchHistoryUiState {
+        val repository = historyRepository ?: return ui.history
+        if (ui.history.completed.isEmpty()) return ui.history
+        val finished = ui.match.matchOver
+        val current = SavedMatch(
+            id = matchId.takeUnless { finished } ?: Uuid.random().toString(),
+            rounds = if (finished) emptyList() else ui.match.rounds,
+        )
+        mutableState.value = ui.copy(history = ui.history.copy(clearing = true))
+        return try {
+            repository.clearCompleted(current)
+            pendingMatches.clear()
+            matchId = current.id
+            MatchHistoryUiState()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            log.e(error) { "Could not clear match history" }
+            ui.history.copy(storageError = true)
         }
     }
 

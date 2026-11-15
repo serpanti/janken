@@ -9,4 +9,5 @@ data class SavedHistory(val current: SavedMatch?, val completed: List<MatchSumma
 interface MatchHistoryRepository {
     suspend fun load(): SavedHistory
     suspend fun save(match: SavedMatch)
+    suspend fun clearCompleted(current: SavedMatch)
 }

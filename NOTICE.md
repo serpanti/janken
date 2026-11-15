@@ -2,6 +2,8 @@
 
 The application uses AndroidX, Kotlin, kotlinx.coroutines, Compose Multiplatform, Skiko/Skia and Google MediaPipe Tasks. Compose and Skiko use Apache-2.0; Skia has a BSD-style license. Third-party notices embedded in the packaged dependencies remain applicable. Dependencies retain their respective licenses.
 
+Match history uses AndroidX Room 3 and SQLite. The browser distribution bundles [SQLite Wasm](https://github.com/sqlite/sqlite-wasm) under Apache-2.0. The browser history worker follows the [AndroidX WebWorkerSQLiteDriver protocol](https://developer.android.com/jetpack/androidx/releases/room3#web-support). [Koin](https://github.com/InsertKoinIO/koin) and [Kermit](https://github.com/touchlab/Kermit) also use Apache-2.0.
+
 The bundled `models/gesture_recognizer.task` is Google's pretrained MediaPipe Gesture Recognizer, float16, version 1. It was downloaded unmodified from:
 https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task
 

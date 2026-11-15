@@ -18,6 +18,8 @@
 
 Результат находится в `webApp/build/dist/wasmJs/productionExecutable`. Раздайте каталог по HTTPS или через HTTP-сервер на localhost. Нужен браузер с WasmGC и разрешением на камеру. Стандартная модель MediaPipe и файлы SDK включены в сборку.
 
+Room хранит историю в OPFS. При повторном открытии используйте тот же адрес и порт. Хранилище привязано к origin и профилю браузера. В один момент базу истории может открыть одна вкладка Janken на этом origin.
+
 ## Desktop
 
 Для запуска из исходников нужен Python 3.10–3.12 с зависимостями из `desktop-camera/requirements.txt`.
@@ -47,7 +49,7 @@ open Janken.xcworkspace
 ## Тесты
 
 ```sh
-./gradlew :domain:desktopTest :presentation:desktopTest :camera:desktopTest
+./gradlew :domain:desktopTest :presentation:desktopTest :camera:desktopTest :data:desktopTest
 ./gradlew :domain:wasmJsNodeTest :presentation:wasmJsNodeTest :camera:wasmJsNodeTest
 ./gradlew :app:lintDebug :app:connectedDebugAndroidTest
 ```

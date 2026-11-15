@@ -66,7 +66,7 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     await target.mouse.up();
   }
   async function startReadyRound(target = page) {
-    const control = target.getByRole('button', { name: /^(Начать раунд|Start round)$/ });
+    const control = target.getByRole('button', { name: /^(Начать раунд|Start round|Продолжить|Continue)$/ });
     for (let step = 0; step < 300 && !await control.isEnabled(); step++) await target.waitForTimeout(100);
     assert.ok(await control.isEnabled(), 'Camera-ready start button must become enabled');
     await target.waitForTimeout(350); // Let the preview/permission layout settle before using canvas coordinates.
@@ -108,8 +108,10 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     await page.getByRole('button', { name: 'Следующий раунд', exact: true }).click({ force: true });
     await page.getByText('Раунд 2', { exact: true }).waitFor({ state: 'attached' });
     const beforeSettingsRound = await page.getByText(/^Раунд \d+$/).textContent();
+    const stopsBeforeSwitch = await page.evaluate(() => globalThis.__cameraTest.stops);
     await swipe(400, 80);
     await selectedInput('Кнопки');
+    await page.waitForFunction(previous => globalThis.__cameraTest.stops > previous, stopsBeforeSwitch);
     const stopsBefore = await page.evaluate(() => globalThis.__cameraTest.stops);
     await settings();
     await page.waitForTimeout(4000);
@@ -131,12 +133,13 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     await page.reload({ waitUntil: 'networkidle' });
     await accessibility(page);
     await selectedInput('Buttons');
-    await page.getByRole('button', { name: 'Start round', exact: true }).waitFor({ state: 'attached' });
+    await page.getByRole('button', { name: 'Continue', exact: true }).waitFor({ state: 'attached' });
+    await page.getByText('Round 3', { exact: true }).waitFor({ state: 'attached' });
     await page.screenshot({ path: path.join(root, '.work/settings-restored-light-en.png') });
     assert.equal(await page.locator('video').count(), 0);
     await swipe(200, 220); // Below the gesture threshold: keep button input.
     await selectedInput('Buttons');
-    console.log('Preferences survive reload: English, light theme and button input.');
+    console.log('The two completed rounds and preferences survive reload.');
 
     await settings();
     await choose('Dark');
@@ -172,6 +175,26 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/jav
     });
     await page.getByRole('button', { name: /Следующий раунд|Сыграть ещё матч/ }).waitFor({ timeout: 15000 });
     console.log('Background and camera restart preserve the pending round.');
+
+    await input('Кнопки');
+    const playAgain = page.getByRole('button', { name: 'Сыграть ещё матч', exact: true });
+    const nextRound = page.getByRole('button', { name: 'Следующий раунд', exact: true });
+    const countdown = page.getByRole('button', { name: 'Приготовьтесь…', exact: true });
+    for (let round = 0; round < 15 && !await playAgain.count(); round++) {
+      await nextRound.click({ force: true });
+      await countdown.waitFor({ timeout: 8000 });
+      await page.getByRole('button', { name: /Бумага$/ }).click({ force: true });
+      await nextRound.or(playAgain).waitFor({ timeout: 12000 });
+    }
+    await playAgain.click({ force: true });
+    await page.getByRole('button', { name: 'Начать раунд', exact: true }).waitFor({ state: 'attached' });
+    await page.reload({ waitUntil: 'networkidle' });
+    await accessibility(page);
+    await page.getByRole('button', { name: 'Начать раунд', exact: true }).waitFor({ state: 'attached' });
+    await page.getByLabel('История матчей', { exact: true }).click({ force: true });
+    await page.getByText(/^(Победа|Поражение)$/).waitFor({ state: 'attached' });
+    await page.getByText(/^(3 : [0-2]|[0-2] : 3)$/).waitFor({ state: 'attached' });
+    console.log('The archived score survives starting a new match and reloading.');
 
     const denied = await browser.newPage({ viewport: { width: 480, height: 850 } });
     await denied.addInitScript(() => {

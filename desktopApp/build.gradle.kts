@@ -14,6 +14,7 @@ java {
 dependencies {
     implementation(project(":shared"))
     implementation(project(":camera"))
+    implementation(project(":data"))
     implementation(compose.desktop.currentOs)
     testImplementation(kotlin("test"))
 }

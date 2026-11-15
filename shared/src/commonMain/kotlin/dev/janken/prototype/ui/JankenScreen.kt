@@ -64,20 +64,23 @@ fun JankenScreen(
     val s = LocalAppStrings.current
     var help by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(settingsOpen, help) { onIntent(GameIntent.SetSettingsVisible(settingsOpen || help)) }
-    val openSettings = { onIntent(GameIntent.SetSettingsVisible(true)); settingsOpen = true }
-    val closeDialogs = { settingsOpen = false; help = false; onIntent(GameIntent.SetSettingsVisible(false)) }
+    var historyOpen by rememberSaveable { mutableStateOf(false) }
+    val dialogOpen = settingsOpen || help || historyOpen
+    LaunchedEffect(dialogOpen) { onIntent(GameIntent.SetDialogVisible(dialogOpen)) }
+    val openSettings = { onIntent(GameIntent.SetDialogVisible(true)); settingsOpen = true }
+    val openHistory = { onIntent(GameIntent.SetDialogVisible(true)); historyOpen = true }
+    val closeDialogs = { settingsOpen = false; help = false; historyOpen = false; onIntent(GameIntent.SetDialogVisible(false)) }
     val onStart = { onIntent(GameIntent.StartRound) }
     val onRestart = { onIntent(GameIntent.Restart) }
     val onButtons: (Boolean) -> Unit = { onIntent(GameIntent.SetInputMethod(if (it) InputMethod.BUTTONS else InputMethod.CAMERA)) }
     val onInput: (InputMethod) -> Unit = { onIntent(GameIntent.SetInputMethod(it)) }
-    val swipeInput = Modifier.inputSwipes(state.settings.inputMethod, cameraSupported && !settingsOpen && !help, onInput)
+    val swipeInput = Modifier.inputSwipes(state.settings.inputMethod, cameraSupported && !dialogOpen, onInput)
     val onManualMove: (Move) -> Unit = { onIntent(GameIntent.SelectManualMove(it)) }
     val onBotMode: (BotMode) -> Unit = { onIntent(GameIntent.SetBotMode(it)) }
     val retryCamera = { onIntent(GameIntent.RetryCamera); onRetry() }
     Box(Modifier.fillMaxSize()) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Ink).safeDrawingPadding()
-        .semantics { if (settingsOpen || help) hideFromAccessibility() }) {
+        .semantics { if (dialogOpen) hideFromAccessibility() }) {
         val landscape = maxWidth > maxHeight && maxWidth >= 720.dp
         val scrollLayout = !landscape && maxHeight < 680.dp
         val compact = maxHeight < 750.dp
@@ -95,6 +98,12 @@ fun JankenScreen(
                         Text("じゃんけん", fontFamily = FontFamily(Font(Res.font.japanese_subtitle)), color = Muted, fontSize = 10.sp)
                         Text(" · ${s.subtitle}", color = Muted, fontSize = 10.sp)
                     }
+                }
+                TextButton(
+                    onClick = openHistory,
+                    modifier = Modifier.semantics { contentDescription = s.matchHistory },
+                ) {
+                    Text(s.history, color = if (state.history.storageError) Warm else Snow)
                 }
                 Box(Modifier.clip(CircleShape).background(Panel).clickable(onClick = openSettings).padding(horizontal = 14.dp, vertical = 8.dp).semantics { contentDescription = s.settings }) {
                     Text("•••", color = Snow, letterSpacing = 2.sp)
@@ -121,6 +130,7 @@ fun JankenScreen(
     }
     if (settingsOpen) SettingsDialog(state.settings, cameraSupported, onIntent,
         onRules = { settingsOpen = false; help = true }, onDismiss = closeDialogs)
+    if (historyOpen) MatchHistoryDialog(state.history, closeDialogs)
     if (help) AppModal(s.rules, closeDialogs, actions = {
         TextButton(onClick = { help = false; settingsOpen = true }) { Text(s.settings) }
         TextButton(onClick = closeDialogs) { Text(s.done) }
@@ -307,7 +317,8 @@ private fun Controls(
         }
         Button(
             onClick = if (match.phase == Phase.FINISHED) onRestart else onStart,
-            enabled = !state.paused && !running && (state.usesButtons || state.cameraReady && state.cameraError == null),
+            enabled = !state.history.loading && !state.paused && !running &&
+                (match.matchOver || state.usesButtons || state.cameraReady && state.cameraError == null),
             modifier = Modifier.fillMaxWidth().height(54.dp),
             shape = RoundedCornerShape(17.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Lime, contentColor = Ink, disabledContainerColor = Edge, disabledContentColor = Muted),
@@ -325,7 +336,7 @@ private fun Controls(
         }
         if (match.rounds.isNotEmpty() && match.phase != Phase.FINISHED) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(s.history, color = Muted, fontSize = 10.sp)
+                Text(s.recentRounds, color = Muted, fontSize = 10.sp)
                 Spacer(Modifier.width(8.dp))
                 match.rounds.takeLast(6).forEach { round ->
                     val color = when (round.outcome) { Outcome.WIN -> Lime; Outcome.LOSS -> Rose; Outcome.DRAW -> Muted }

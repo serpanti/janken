@@ -3,6 +3,7 @@ package dev.janken.prototype.ui
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import dev.janken.prototype.camera.RecognitionFrame
+import dev.janken.prototype.di.GameStoreFactory
 import dev.janken.prototype.mvi.*
 
 class CameraCallbacks(
@@ -13,20 +14,17 @@ class CameraCallbacks(
 
 @Composable
 fun CameraGameApp(
-    clock: GameClock,
+    storeFactory: GameStoreFactory,
     active: Boolean = true,
-    settingsStorage: SettingsStorage,
     cameraContent: @Composable (Modifier, CameraCallbacks) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val store = remember(clock, settingsStorage) { GameStore(scope, clock,
-        initial = GameSnapshot(settings = runCatching { settingsStorage.load() }.getOrDefault(AppSettings()))) }
+    val store = remember(storeFactory) { storeFactory.create(scope) }
     var requested by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
     DisposableEffect(store) { onDispose { store.close() } }
     LaunchedEffect(active) { store.accept(if (active) GameIntent.Resume else GameIntent.Pause) }
     val state by store.state.collectAsState()
-    LaunchedEffect(state.settings) { runCatching { settingsStorage.save(state.settings) } }
     val callbacks = remember(store) { CameraCallbacks(
         onFrame = { store.accept(GameIntent.FrameReceived(it)) },
         onReady = { store.accept(GameIntent.CameraReady) },

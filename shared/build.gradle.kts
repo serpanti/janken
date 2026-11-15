@@ -28,6 +28,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":presentation"))
+            api(libs.koin.core)
+            implementation(libs.kermit)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -40,7 +42,10 @@ kotlin {
             dependencies { implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2") }
         }
         val iosMain by getting {
-            dependencies { implementation(project(":camera")) }
+            dependencies {
+                implementation(project(":camera"))
+                implementation(project(":data"))
+            }
         }
     }
 }

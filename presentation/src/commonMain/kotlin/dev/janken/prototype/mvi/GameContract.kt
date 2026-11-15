@@ -13,14 +13,21 @@ data class GameUiState(
     val settings: AppSettings = AppSettings(),
     val manualMove: Move? = null,
     val paused: Boolean = false,
+    val history: MatchHistoryUiState = MatchHistoryUiState(),
 ) {
     val usesButtons get() = settings.inputMethod == InputMethod.BUTTONS
     val botMode get() = settings.botMode
     val skeleton get() = settings.skeleton
 }
 
+data class MatchHistoryUiState(
+    val completed: List<MatchSummary> = emptyList(),
+    val loading: Boolean = false,
+    val storageError: Boolean = false,
+)
+
 enum class GameMessage { TIMED_OUT }
-enum class PauseCause { BACKGROUND, SETTINGS, CAMERA }
+enum class PauseCause { BACKGROUND, DIALOG, CAMERA }
 
 /** Only durable state is restored; a round in progress is always cancelled. */
 data class GameSnapshot(
@@ -42,7 +49,7 @@ sealed interface GameIntent {
     data class SelectManualMove(val move: Move) : GameIntent
     data class SetTheme(val mode: ThemeMode) : GameIntent
     data class SetLanguage(val language: AppLanguage) : GameIntent
-    data class SetSettingsVisible(val visible: Boolean) : GameIntent
+    data class SetDialogVisible(val visible: Boolean) : GameIntent
     data class SetBotMode(val mode: BotMode) : GameIntent
     data class SetSkeleton(val enabled: Boolean) : GameIntent
 }

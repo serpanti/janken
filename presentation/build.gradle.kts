@@ -21,6 +21,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":domain"))
             api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+            implementation(libs.kermit)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

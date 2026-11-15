@@ -7,11 +7,14 @@ import androidx.compose.ui.viewinterop.UIKitViewController
 import androidx.compose.ui.window.ComposeUIViewController
 import dev.janken.camera.CameraMessage
 import dev.janken.camera.CameraWire
+import dev.janken.data.iosMatchHistory
+import dev.janken.prototype.di.gameModule
 import dev.janken.prototype.mvi.GameClock
 import dev.janken.prototype.mvi.SettingsStorage
 import dev.janken.prototype.mvi.AppSettings
 import dev.janken.prototype.ui.CameraCallbacks
 import dev.janken.prototype.ui.CameraGameApp
+import org.koin.dsl.koinApplication
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSProcessInfo
@@ -47,6 +50,16 @@ private object IosClock : GameClock {
     override fun nowMillis() = (NSProcessInfo.processInfo.systemUptime * 1_000).toLong()
 }
 
+private val iosDependencies by lazy {
+    val preferences = object : SettingsStorage {
+        override fun load() = AppSettings.decode(NSUserDefaults.standardUserDefaults.stringForKey("dev.janken.settings.v1"))
+        override fun save(settings: AppSettings) {
+            NSUserDefaults.standardUserDefaults.setObject(settings.encode(), forKey = "dev.janken.settings.v1")
+        }
+    }
+    koinApplication { modules(gameModule(IosClock, preferences, ::iosMatchHistory)) }
+}
+
 fun MainViewController(cameraFactory: (IosCameraSink) -> NativeCameraController): UIViewController = ComposeUIViewController {
     var active by remember { mutableStateOf(true) }
     DisposableEffect(Unit) {
@@ -55,11 +68,7 @@ fun MainViewController(cameraFactory: (IosCameraSink) -> NativeCameraController)
         val foreground = center.addObserverForName(UIApplicationDidBecomeActiveNotification, null, NSOperationQueue.mainQueue) { active = true }
         onDispose { center.removeObserver(background); center.removeObserver(foreground) }
     }
-    val preferences = remember { object : SettingsStorage {
-        override fun load() = AppSettings.decode(NSUserDefaults.standardUserDefaults.stringForKey("dev.janken.settings.v1"))
-        override fun save(settings: AppSettings) { NSUserDefaults.standardUserDefaults.setObject(settings.encode(), forKey = "dev.janken.settings.v1") }
-    } }
-    CameraGameApp(IosClock, active, preferences) { modifier, callbacks ->
+    CameraGameApp(iosDependencies.koin.get(), active) { modifier, callbacks ->
         val sink = remember(callbacks) { IosCameraSink(callbacks) }
         val native = remember(sink) { cameraFactory(sink) }
         DisposableEffect(native) { onDispose { sink.close(); native.stop() } }

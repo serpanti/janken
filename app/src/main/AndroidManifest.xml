@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <application
+        android:name=".JankenApplication"
         android:allowBackup="false"
         android:label="Janken"
         android:icon="@drawable/ic_launcher"

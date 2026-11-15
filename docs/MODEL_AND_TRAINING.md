@@ -1,6 +1,6 @@
 # Распознавание жестов
 
-MediaPipe находит кисть и возвращает 21 ключевую точку. На Android пакет [janken_gesture_recognizer.task](../app/src/main/assets/janken_gesture_recognizer.task) включает модели Google для определения кисти и признаков жеста, а также классификатор Janken.
+MediaPipe находит кисть и возвращает 21 ключевую точку. На Android пакет [janken_gesture_recognizer.task](../app/src/main/assets/janken_gesture_recognizer.task) включает модели Google для определения кисти и признаков жеста, а также классификатор Janken. Web, desktop и iOS используют [стандартную модель Google](../models/gesture_recognizer.task).
 
 ## Выбор хода
 

@@ -18,12 +18,13 @@ object GameReducer {
                 ui = ui.copy(match = MatchState(), message = null, stable = StableGesture(), manualMove = null),
                 activeRound = null, hold = GestureHold(), pausedAt = null,
             ).let { setPaused(it, PauseCause.CAMERA, false, now) })
+            GameIntent.ClearMatchHistory -> Reduction(state)
             GameIntent.Pause -> Reduction(setPaused(state, PauseCause.BACKGROUND, true, now).let {
                 val cleared = it.copy(ui = it.ui.copy(cameraReady = false, frame = RecognitionFrame(), stable = StableGesture()), hold = GestureHold())
                 if (cleared.activeRound != null && !ui.usesButtons) setPaused(cleared, PauseCause.CAMERA, true, now) else cleared
             })
             GameIntent.Resume -> Reduction(setPaused(state, PauseCause.BACKGROUND, false, now))
-            is GameIntent.SetSettingsVisible -> Reduction(setPaused(state, PauseCause.SETTINGS, intent.visible, now))
+            is GameIntent.SetDialogVisible -> Reduction(setPaused(state, PauseCause.DIALOG, intent.visible, now))
             GameIntent.CameraReady -> Reduction(if (ui.usesButtons || PauseCause.BACKGROUND in state.pauseCauses) state else
                 setPaused(state.copy(ui = ui.copy(cameraReady = true, cameraError = null)), PauseCause.CAMERA, false, now))
             GameIntent.RetryCamera -> Reduction(if (ui.usesButtons) state else waitForCamera(state, null, now))

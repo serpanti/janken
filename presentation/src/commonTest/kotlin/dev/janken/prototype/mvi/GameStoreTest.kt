@@ -1,6 +1,7 @@
 package dev.janken.prototype.mvi
 
 import dev.janken.prototype.game.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -31,7 +32,6 @@ class GameStoreTest {
         store.effects.onEach { lateEffects += it }.launchIn(backgroundScope)
         runCurrent()
         assertTrue(lateEffects.isEmpty())
-        assertEquals(store.state.value.match.rounds, store.snapshot.value.rounds)
         store.close()
     }
 
@@ -42,10 +42,50 @@ class GameStoreTest {
         first.accept(GameIntent.StartRound)
         first.accept(GameIntent.Pause)
         runCurrent()
-        val second = GameStore(backgroundScope, clock, initial = first.snapshot.value, autoTick = false)
+        val snapshot = GameSnapshot(first.state.value.match.rounds, first.state.value.settings)
+        val second = GameStore(backgroundScope, clock, initial = snapshot, autoTick = false)
         assertEquals(1, second.state.value.match.playerScore)
         assertEquals(Phase.READY, second.state.value.match.phase)
         assertEquals(BotMode.ADAPTIVE, second.state.value.botMode)
         first.close(); second.close()
+    }
+
+    @Test fun restoresAndSavesRoundBeforePublishingResult() = runTest {
+        var now = 1_000L
+        val firstRound = Round(Move.PAPER, Move.ROCK)
+        val written = mutableListOf<SavedMatch>()
+        val writing = CompletableDeferred<Unit>()
+        val storage = object : MatchHistoryRepository {
+            override suspend fun load() = SavedHistory(SavedMatch("current", listOf(firstRound)), emptyList())
+            override suspend fun save(match: SavedMatch) {
+                writing.await()
+                written += match
+            }
+            override suspend fun clearCompleted(current: SavedMatch) = error("Unexpected history clear")
+        }
+        val store = GameStore(
+            backgroundScope, GameClock { now },
+            initial = GameSnapshot(settings = AppSettings(inputMethod = InputMethod.BUTTONS)),
+            autoTick = false, openHistory = { storage },
+        )
+        assertTrue(store.state.value.history.loading)
+        runCurrent()
+        assertEquals(listOf(firstRound), store.state.value.match.rounds)
+        assertEquals(Phase.READY, store.state.value.match.phase)
+
+        store.accept(GameIntent.SelectManualMove(Move.ROCK))
+        store.accept(GameIntent.StartRound)
+        runCurrent()
+        for (time in listOf(4_000L, 4_120L, 4_240L, 4_360L)) {
+            now = time
+            store.accept(GameIntent.Tick)
+            runCurrent()
+        }
+        assertEquals(listOf(firstRound), store.state.value.match.rounds)
+        writing.complete(Unit)
+        runCurrent()
+        assertEquals(Phase.RESULT, store.state.value.match.phase)
+        assertEquals(listOf(SavedMatch("current", store.state.value.match.rounds)), written)
+        store.close()
     }
 }

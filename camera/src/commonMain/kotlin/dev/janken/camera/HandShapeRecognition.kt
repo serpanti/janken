@@ -26,12 +26,7 @@ object HandShapeRecognition {
         width: Int,
         height: Int,
     ): GesturePrediction {
-        val modelMove = when (label?.lowercase()) {
-            "rock" -> Move.ROCK
-            "paper" -> Move.PAPER
-            "scissors" -> Move.SCISSORS
-            else -> null
-        }
+        val modelMove = GestureLabels.toMove(label)
         val shape = classify(imagePoints, width, height)
         val modelConfirmsShape = shape == modelMove && modelScore >= MIN_GESTURE_CONFIDENCE
         if (shape != null && !modelConfirmsShape) {

@@ -32,20 +32,21 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.janken.prototype.camera.CameraFeed
 import dev.janken.prototype.mvi.GameEffect
 import dev.janken.prototype.mvi.GameIntent
 import dev.janken.prototype.mvi.InputMethod
 import dev.janken.prototype.ui.JankenScreen
 import dev.janken.prototype.ui.JankenTheme
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
+    private val model: GameViewModel by viewModel()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         updateSystemBars(dark = true)
         setContent {
-            val model: GameViewModel = viewModel()
             val ui by model.ui.collectAsStateWithLifecycle()
             val dark = ui.settings.theme.isDark(isSystemInDarkTheme())
             DisposableEffect(dark) {

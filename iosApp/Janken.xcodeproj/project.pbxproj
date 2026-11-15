@@ -1,0 +1,95 @@
+// !$*UTF8*$!
+{
+  archiveVersion = 1;
+  classes = {};
+  objectVersion = 56;
+  objects = {
+    A00000000000000000000001 = {isa = PBXBuildFile; fileRef = A00000000000000000000002; };
+    A00000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JankenApp.swift; sourceTree = "<group>"; };
+    A00000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Janken.app; sourceTree = BUILT_PRODUCTS_DIR; };
+    A00000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+    A00000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewController.swift; sourceTree = "<group>"; };
+    A00000000000000000000021 = {isa = PBXBuildFile; fileRef = A00000000000000000000020; };
+    A00000000000000000000022 = {isa = PBXFileReference; lastKnownFileType = file; path = ../models/gesture_recognizer.task; sourceTree = SOURCE_ROOT; };
+    A00000000000000000000023 = {isa = PBXBuildFile; fileRef = A00000000000000000000022; };
+    A00000000000000000000005 = {isa = PBXGroup; children = (A00000000000000000000006, A00000000000000000000007); sourceTree = "<group>"; };
+    A00000000000000000000006 = {isa = PBXGroup; children = (A00000000000000000000002, A00000000000000000000020, A00000000000000000000004, A00000000000000000000022); path = iosApp; sourceTree = "<group>"; };
+    A00000000000000000000007 = {isa = PBXGroup; children = (A00000000000000000000003); name = Products; sourceTree = "<group>"; };
+    A00000000000000000000008 = {
+      isa = PBXProject;
+      attributes = {BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; TargetAttributes = {A00000000000000000000009 = {CreatedOnToolsVersion = 16.0; }; }; };
+      buildConfigurationList = A00000000000000000000010;
+      compatibilityVersion = "Xcode 14.0";
+      developmentRegion = ru;
+      hasScannedForEncodings = 0;
+      knownRegions = (ru, en, Base);
+      mainGroup = A00000000000000000000005;
+      productRefGroup = A00000000000000000000007;
+      projectDirPath = "";
+      projectRoot = "";
+      targets = (A00000000000000000000009);
+    };
+    A00000000000000000000009 = {
+      isa = PBXNativeTarget;
+      buildConfigurationList = A00000000000000000000011;
+      buildPhases = (A00000000000000000000012, A00000000000000000000013, A00000000000000000000014, A00000000000000000000015);
+      buildRules = ();
+      dependencies = ();
+      name = Janken;
+      productName = Janken;
+      productReference = A00000000000000000000003;
+      productType = "com.apple.product-type.application";
+    };
+    A00000000000000000000012 = {
+      isa = PBXShellScriptBuildPhase;
+      alwaysOutOfDate = 1;
+      buildActionMask = 2147483647;
+      files = ();
+      inputPaths = ();
+      name = "Build Kotlin framework";
+      outputPaths = ();
+      runOnlyForDeploymentPostprocessing = 0;
+      shellPath = /bin/sh;
+      shellScript = "cd \"$SRCROOT/..\"\n/bin/sh ./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
+    };
+    A00000000000000000000013 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000001, A00000000000000000000021); runOnlyForDeploymentPostprocessing = 0; };
+    A00000000000000000000014 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+    A00000000000000000000015 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000023); runOnlyForDeploymentPostprocessing = 0; };
+    A00000000000000000000010 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000016, A00000000000000000000017); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+    A00000000000000000000011 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000018, A00000000000000000000019); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+    A00000000000000000000016 = {isa = XCBuildConfiguration; buildSettings = {SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 15.4; SWIFT_VERSION = 5.0; }; name = Debug; };
+    A00000000000000000000017 = {isa = XCBuildConfiguration; buildSettings = {SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 15.4; SWIFT_VERSION = 5.0; }; name = Release; };
+    A00000000000000000000018 = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_STYLE = Automatic;
+        ENABLE_USER_SCRIPT_SANDBOXING = NO;
+        FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)");
+        GENERATE_INFOPLIST_FILE = NO;
+        INFOPLIST_FILE = iosApp/Info.plist;
+        OTHER_LDFLAGS = ("$(inherited)", "-framework", JankenShared);
+        PRODUCT_BUNDLE_IDENTIFIER = dev.janken.prototype;
+        PRODUCT_NAME = "$(TARGET_NAME)";
+        SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+        TARGETED_DEVICE_FAMILY = "1,2";
+      };
+      name = Debug;
+    };
+    A00000000000000000000019 = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_STYLE = Automatic;
+        ENABLE_USER_SCRIPT_SANDBOXING = NO;
+        FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)");
+        GENERATE_INFOPLIST_FILE = NO;
+        INFOPLIST_FILE = iosApp/Info.plist;
+        OTHER_LDFLAGS = ("$(inherited)", "-framework", JankenShared);
+        PRODUCT_BUNDLE_IDENTIFIER = dev.janken.prototype;
+        PRODUCT_NAME = "$(TARGET_NAME)";
+        TARGETED_DEVICE_FAMILY = "1,2";
+      };
+      name = Release;
+    };
+  };
+  rootObject = A00000000000000000000008;
+}

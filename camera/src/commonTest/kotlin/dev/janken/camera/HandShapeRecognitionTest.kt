@@ -12,6 +12,8 @@ class HandShapeRecognitionTest {
         val p = it.jsonObject
         HandPoint(p.getValue("x").jsonPrimitive.float, p.getValue("y").jsonPrimitive.float)
     }
+    private fun packet(case: JsonObject) = JsonObject(case + mapOf("type" to JsonPrimitive("frame"), "timestampMs" to JsonPrimitive(100)))
+
     @Test fun actualSdkLandmarksRecognizeAllThreeShapesAcrossImageRotations() {
         assertEquals(16, cases.size)
         for (case in cases) {
@@ -24,18 +26,18 @@ class HandShapeRecognitionTest {
             }
             assertEquals(expected, HandShapeRecognition.classify(image(case),
                 case.getValue("width").jsonPrimitive.int, case.getValue("height").jsonPrimitive.int), name)
+            val decoded = (CameraWire.decode(packet(case).toString()) as CameraMessage.Observation).frame
+            assertEquals(expected, decoded.move, "wire: $name")
+            if (expected != null) assertTrue(decoded.confidence >= .65f, name)
         }
     }
 
     @Test fun sidewaysScissorsUseImageShapeWhenCannedClassifierReturnsNone() {
         val sideways = cases.first { it.getValue("name").jsonPrimitive.content == "victory_90" }
         assertEquals("None", sideways.getValue("label").jsonPrimitive.content)
-        val prediction = HandShapeRecognition.predict(
-            "None", sideways.getValue("score").jsonPrimitive.float, image(sideways),
-            sideways.getValue("width").jsonPrimitive.int, sideways.getValue("height").jsonPrimitive.int,
-        )
-        assertEquals(Move.SCISSORS, prediction.move)
-        assertEquals(RecognitionMethod.HAND_SHAPE, prediction.method)
+        val frame = (CameraWire.decode(packet(sideways).toString()) as CameraMessage.Observation).frame
+        assertEquals(Move.SCISSORS, frame.move)
+        assertEquals(RecognitionMethod.HAND_SHAPE, frame.method)
     }
 
     @Test fun modelFallbackRequiresAGameGestureAndKeepsItsScore() {
@@ -47,4 +49,12 @@ class HandShapeRecognitionTest {
         assertNull(HandShapeRecognition.predict("None", .99f, ambiguous, 640, 480).move)
     }
 
+    @Test fun badWorldPacketsAreRejectedAndLegacyPacketsStillWork() {
+        val original = cases.first()
+        assertFails { CameraWire.decode(packet(original).toString().replace("\"worldPoints\":[", "\"worldPoints\":[{\"x\":0,\"y\":0,\"z\":0},")) }
+        val legacy = JsonObject(packet(original) - "worldPoints")
+        val frame = (CameraWire.decode(legacy.toString()) as CameraMessage.Observation).frame
+        assertEquals(Move.ROCK, frame.move)
+        assertEquals(RecognitionMethod.MODEL, frame.method)
+    }
 }
